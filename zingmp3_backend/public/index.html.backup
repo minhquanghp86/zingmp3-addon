@@ -1,1 +1,269 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZingMp3 API</title>
+  <style>
+    /* Phần sửa đổi để giới hạn 800px và căn giữa */
+    body { 
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; 
+      background: #0b1020; 
+      color: #e5e7eb; 
+      margin: 0;
+      padding: 20px 0; /* Khoảng cách trên dưới */
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 800px; /* Giới hạn chiều ngang 800px */
+      padding: 0 15px; /* Padding nhẹ cho thiết bị di động */
+      box-sizing: border-box;
+    }
 
+    /* Style cho header title */
+    .header-title {
+      text-align: center;
+      margin-bottom: 24px;
+      padding: 20px 0;
+      border-bottom: 2px solid #374151;
+    }
+    
+    .header-title h1 {
+      font-size: 32px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 0;
+      letter-spacing: 1px;
+    }
+
+    /* Các style cũ được giữ nguyên */
+    h1 { margin: 0 0 12px; font-size: 20px; }
+    .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; color: #93c5fd; }
+    input[type="text"], input[type="url"] { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #374151; background: #0f172a; color: #e5e7eb; }
+    button { background: #2563eb; color: white; border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+    pre { background: #0f172a; color: #d1d5db; padding: 12px; border-radius: 8px; overflow: auto; max-height: 60vh; white-space: pre-wrap; word-wrap: break-word; }
+    small { color: #9ca3af; }
+    .group-title { color: #fcd34d; font-weight: 600; margin: 8px 0; }
+    audio { width: 100%; margin-top: 8px; }
+    .hidden { display: none; }
+    #direct128 { color: #ef4444; word-break: break-all; display: block; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header Title -->
+    <div class="header-title">
+      <h1>MQ ZingMp3_API</h1>
+    </div>
+
+    <div class="card">
+      <div class="group-title">Tìm kiếm theo từ khóa</div>
+      <div class="row">
+        <div>
+          <label>Tên bài hát, tên ca sĩ,...</label>
+          <input id="kw" type="text" placeholder="Ví dụ: Phai dấu cuộc tình" />
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:8px;">
+          <button id="btnSearchV2">Tìm kiếm</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="group-title">Tìm kiếm theo Song ID (nhập thủ công)</div>
+      <div class="row">
+        <div>
+          <label>Song ID</label>
+          <input id="songId" type="text" placeholder="Ví dụ: ZOACFBBU" />
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:8px; flex-wrap: wrap;">
+          <button id="btnPlay">Phát nhạc (Proxy)</button>
+          <button id="btnGetLinkProxy">Link Proxy</button>
+          <button id="btnGetLinkGoc">Link Gốc</button>
+          <button id="btnInfoSong">Thông tin</button>
+          <button id="btnLyric">Lời bài hát</button>
+        </div>
+      </div>
+      <audio id="player" class="hidden" controls></audio>
+      <a id="direct128" class="hidden" target="_blank" rel="noreferrer noopener"></a>
+      <small id="note128" class="hidden">Lưu ý: Link gốc có thể bị giới hạn truy cập theo khu vực hoặc thời gian.</small>
+    </div>
+
+    <div class="card" style="background: #1e3a8a; border-color: #3b82f6;">
+      <div class="group-title" style="color: #60a5fa;">🔍 Debug Info</div>
+      <pre id="debugInfo" style="background: #1e293b; color: #fbbf24; font-size: 12px; max-height: 150px;"></pre>
+    </div>
+
+    <div class="card">
+      <label>Kết quả</label>
+      <pre id="out">(chưa có dữ liệu)</pre>
+    </div>
+  </div>
+
+  <script>
+    const out = document.getElementById('out');
+    const player = document.getElementById('player');
+    const direct128 = document.getElementById('direct128');
+    const note128 = document.getElementById('note128');
+    const songIdInput = document.getElementById('songId');
+    const debugInfo = document.getElementById('debugInfo');
+
+    const setOut = (d) => out.textContent = typeof d === 'string' ? d : JSON.stringify(d, null, 2);
+    
+    function debugLog(msg) {
+      const timestamp = new Date().toLocaleTimeString();
+      debugInfo.textContent += `[${timestamp}] ${msg}\n`;
+    }
+
+    function pickSongFields(s) {
+      return {
+        encodeId: s?.encodeId,
+        title: s?.title,
+        artistsNames: s?.artistsNames,
+        duration: s?.duration
+      };
+    }
+
+    // Detect base URL - works for both direct access and ingress
+    function getBaseUrl() {
+      const path = window.location.pathname;
+      // Direct access: / or /index.html
+      if (path === '/' || path === '/index.html') {
+        return '';
+      }
+      // Ingress: /api/hassio_ingress/TOKEN/
+      return path.replace(/\/$/, '');
+    }
+
+    const BASE_URL = getBaseUrl();
+    debugLog('BASE_URL: ' + BASE_URL);
+    debugLog('pathname: ' + window.location.pathname);
+    debugLog('href: ' + window.location.href);
+
+    async function call(path, params) {
+      // Use relative path instead of full URL
+      let urlPath = BASE_URL + path;
+      const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+      const fullUrl = urlPath + queryString;
+      
+      debugLog('Fetching: ' + fullUrl);
+      setOut('Loading...');
+      const res = await fetch(fullUrl);
+      if (!res.ok) {
+        const text = await res.text();
+        debugLog('ERROR ' + res.status + ': ' + text.substring(0, 100));
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+      debugLog('Success!');
+      return res.json();
+    }
+
+    // 1. Tìm kiếm
+    document.getElementById('btnSearchV2').onclick = async () => {
+      const q = document.getElementById('kw').value.trim();
+      if (!q) return setOut('Vui lòng nhập từ khóa');
+      try {
+        const res = await call('/api/search', { q });
+        const songs = res?.data?.items?.filter(i => i.resourceType === 'song') || res?.data?.songs || [];
+        const concise = songs.map(pickSongFields);
+        
+        if (concise.length > 0 && concise[0].encodeId) {
+          songIdInput.value = concise[0].encodeId;
+        }
+        setOut({ total: concise.length, songs: concise });
+      } catch (e) {
+        setOut(String(e));
+      }
+    };
+
+    // 2. Phát nhạc qua Proxy
+    document.getElementById('btnPlay').onclick = () => {
+      const id = songIdInput.value.trim();
+      if (!id) return alert('Vui lòng nhập Song ID');
+      
+      const proxyUrl = `${BASE_URL}/proxy_audio?id=${encodeURIComponent(id)}`;
+      player.src = proxyUrl;
+      player.classList.remove('hidden');
+      player.play();
+      
+      direct128.href = proxyUrl;
+      direct128.textContent = "Đang phát qua Proxy: " + proxyUrl;
+      direct128.classList.remove('hidden');
+      note128.classList.remove('hidden');
+    };
+
+    // 3. Hiển thị Link Stream Proxy
+    document.getElementById('btnGetLinkProxy').onclick = () => {
+      const id = songIdInput.value.trim();
+      if (!id) return setOut('Vui lòng nhập Song ID');
+      const proxyUrl = `${BASE_URL}/proxy_audio?id=${id}`;
+      setOut({ proxy_stream: proxyUrl });
+    };
+
+    // 4. Lấy Link Stream Gốc từ Zing
+    document.getElementById('btnGetLinkGoc').onclick = async () => {
+      const id = songIdInput.value.trim();
+      if (!id) return setOut('Vui lòng nhập Song ID');
+      try {
+        const res = await call('/api/song', { id });
+        const linkGoc = res?.data?.['128'] || res?.data?.['320'];
+        if (linkGoc) {
+          setOut({ 
+            note: "Đây là link trực tiếp từ máy chủ Zing",
+            link_goc: linkGoc 
+          });
+          direct128.href = linkGoc;
+          direct128.textContent = "Mở link gốc trong tab mới";
+          direct128.classList.remove('hidden');
+        } else {
+          setOut(res);
+        }
+      } catch (e) { setOut(String(e)); }
+    };
+
+    // 5. Thông tin bài hát
+    document.getElementById('btnInfoSong').onclick = async () => {
+      const id = songIdInput.value.trim();
+      if (!id) return setOut('Vui lòng nhập Song ID');
+      try { 
+        const res = await call('/api/info-song', { id });
+        setOut(res); 
+      } catch (e) { setOut(String(e)); }
+    };
+
+    // 6. Lời bài hát
+    document.getElementById('btnLyric').onclick = async () => {
+      const id = songIdInput.value.trim();
+      if (!id) return setOut('Vui lòng nhập Song ID');
+      try {
+        const res = await call('/api/lyric', { id });
+        const fileUrl = res?.data?.file;
+        if (fileUrl) {
+          try {
+            const resp = await fetch(fileUrl);
+            const lrc = await resp.text();
+            const cleanText = lrc
+              .split('\n')
+              .map(line => line.replace(/\[\d{2}:\d{2}.\d{2}\]/g, '').trim())
+              .filter(line => line.length > 0)
+              .join('\n');
+            setOut(`URL: ${fileUrl}\n\n--- NỘI DUNG ---\n${cleanText}`);
+          } catch (err) {
+            setOut({ error: "Không thể tải file .lrc", data: res });
+          }
+        } else {
+          setOut(res);
+        }
+      } catch (e) { setOut(String(e)); }
+    };
+  </script>
+</body>
+</html>
