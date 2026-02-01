@@ -1,5 +1,4 @@
-# 1.0.1
+# 1.0.2
 
 ### Fixed
-- Sửa lỗi hỗ trợ Ingress
-- Thêm tính năng phát hiện BASE_URL
+- Sửa lỗi
