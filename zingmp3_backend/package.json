@@ -1,12 +1,12 @@
 {
-  "name": "zingmp3-backend",
-  "version": "1.0.0",
-  "description": "ZingMP3 API Server for Home Assistant",
+  "name": "mp3-api",
+  "version": "1.0.14",
+  "description": "mp3-api",
   "main": "dist/index.js",
   "types": "dist",
   "repository": {
     "type": "git",
-    "url": "https://github.com/minhquanghp86/zingmp3-addon"
+    "url": "https://github.com/nvhung9/mp3-api"
   },
   "keywords": [
     "zingmp3",
@@ -14,8 +14,8 @@
     "zingmp3 api",
     "api"
   ],
-  "author": "minhquanghp86",
-  "license": "MIT",
+  "author": "mrhung9 <mrhung.io.vn>",
+  "license": "ISC",
   "scripts": {
     "dev": "nodemon --watch server.js --watch public --ext js,html,css --exec node server.js",
     "start": "node server.js"
