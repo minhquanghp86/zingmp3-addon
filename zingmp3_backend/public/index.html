@@ -121,8 +121,21 @@
       };
     }
 
+    // Detect base URL - works for both direct access and ingress
+    function getBaseUrl() {
+      const path = window.location.pathname;
+      // Direct access: / or /index.html
+      if (path === '/' || path === '/index.html') {
+        return '';
+      }
+      // Ingress: /api/hassio_ingress/TOKEN/
+      return path.replace(/\/$/, '');
+    }
+
+    const BASE_URL = getBaseUrl();
+
     async function call(path, params) {
-      const url = new URL(path, window.location.origin);
+      const url = new URL(path, window.location.origin + BASE_URL);
       if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
       setOut('Loading...');
       const res = await fetch(url);
@@ -156,7 +169,7 @@
       const id = songIdInput.value.trim();
       if (!id) return alert('Vui lòng nhập Song ID');
       
-      const proxyUrl = `${window.location.origin}/proxy_audio?id=${encodeURIComponent(id)}`;
+      const proxyUrl = `${window.location.origin}${BASE_URL}/proxy_audio?id=${encodeURIComponent(id)}`;
       player.src = proxyUrl;
       player.classList.remove('hidden');
       player.play();
@@ -171,7 +184,7 @@
     document.getElementById('btnGetLinkProxy').onclick = () => {
       const id = songIdInput.value.trim();
       if (!id) return setOut('Vui lòng nhập Song ID');
-      const proxyUrl = `${window.location.origin}/proxy_audio?id=${id}`;
+      const proxyUrl = `${window.location.origin}${BASE_URL}/proxy_audio?id=${id}`;
       setOut({ proxy_stream: proxyUrl });
     };
 
