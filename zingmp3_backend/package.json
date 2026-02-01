@@ -1,0 +1,19 @@
+{
+  "name": "zingmp3-backend",
+  "version": "1.0.0",
+  "description": "ZingMP3 API Server for Home Assistant",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["zingmp3", "music", "api", "homeassistant"],
+  "author": "minhquanghp86",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
