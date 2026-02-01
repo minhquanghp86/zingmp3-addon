@@ -126,5 +126,5 @@ app.get('/proxy_lyric', async (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`ZingMP3 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
