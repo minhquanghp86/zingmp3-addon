@@ -1,6 +1,6 @@
 {
   "name": "ZingMP3 Backend",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "slug": "zingmp3_backend",
   "description": "Backend ZingMP3 API server. Tìm kiếm, stream nhạc và proxy endpoints.",
   "repository": "https://github.com/minhquanghp86/zingmp3-addon",
