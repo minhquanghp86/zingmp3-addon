@@ -97,6 +97,11 @@
       <small id="note128" class="hidden">Lưu ý: Link gốc có thể bị giới hạn truy cập theo khu vực hoặc thời gian.</small>
     </div>
 
+    <div class="card" style="background: #1e3a8a; border-color: #3b82f6;">
+      <div class="group-title" style="color: #60a5fa;">🔍 Debug Info</div>
+      <pre id="debugInfo" style="background: #1e293b; color: #fbbf24; font-size: 12px; max-height: 150px;"></pre>
+    </div>
+
     <div class="card">
       <label>Kết quả</label>
       <pre id="out">(chưa có dữ liệu)</pre>
@@ -109,8 +114,14 @@
     const direct128 = document.getElementById('direct128');
     const note128 = document.getElementById('note128');
     const songIdInput = document.getElementById('songId');
+    const debugInfo = document.getElementById('debugInfo');
 
     const setOut = (d) => out.textContent = typeof d === 'string' ? d : JSON.stringify(d, null, 2);
+    
+    function debugLog(msg) {
+      const timestamp = new Date().toLocaleTimeString();
+      debugInfo.textContent += `[${timestamp}] ${msg}\n`;
+    }
 
     function pickSongFields(s) {
       return {
@@ -133,16 +144,25 @@
     }
 
     const BASE_URL = getBaseUrl();
+    debugLog('BASE_URL: ' + BASE_URL);
+    debugLog('pathname: ' + window.location.pathname);
+    debugLog('href: ' + window.location.href);
 
     async function call(path, params) {
-      const url = new URL(path, window.location.origin + BASE_URL);
-      if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+      // Use relative path instead of full URL
+      let urlPath = BASE_URL + path;
+      const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+      const fullUrl = urlPath + queryString;
+      
+      debugLog('Fetching: ' + fullUrl);
       setOut('Loading...');
-      const res = await fetch(url);
+      const res = await fetch(fullUrl);
       if (!res.ok) {
         const text = await res.text();
+        debugLog('ERROR ' + res.status + ': ' + text.substring(0, 100));
         throw new Error(`HTTP ${res.status}: ${text}`);
       }
+      debugLog('Success!');
       return res.json();
     }
 
@@ -169,7 +189,7 @@
       const id = songIdInput.value.trim();
       if (!id) return alert('Vui lòng nhập Song ID');
       
-      const proxyUrl = `${window.location.origin}${BASE_URL}/proxy_audio?id=${encodeURIComponent(id)}`;
+      const proxyUrl = `${BASE_URL}/proxy_audio?id=${encodeURIComponent(id)}`;
       player.src = proxyUrl;
       player.classList.remove('hidden');
       player.play();
@@ -184,7 +204,7 @@
     document.getElementById('btnGetLinkProxy').onclick = () => {
       const id = songIdInput.value.trim();
       if (!id) return setOut('Vui lòng nhập Song ID');
-      const proxyUrl = `${window.location.origin}${BASE_URL}/proxy_audio?id=${id}`;
+      const proxyUrl = `${BASE_URL}/proxy_audio?id=${id}`;
       setOut({ proxy_stream: proxyUrl });
     };
 
